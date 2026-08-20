@@ -1,8 +1,8 @@
 # merelang
 
-A small ML-family programming language with explicit region-bound
-memory, capability-passing effects, and feature-parity codegen to
-**interp + C + LLVM + Wasm**.
+A small ML-family programming language with region-based memory (no GC),
+effects as ordinary capability values, and **five backends kept in
+byte-level agreement**: interpreter, C, LLVM IR, Wasm, and RV32IM.
 
 The name **Mere** is Old English for "lake" — the region metaphor (a
 body bounded from its surroundings), the minimal ML-family ring, and a
@@ -13,53 +13,55 @@ modest "just a …" nuance.
 | repo | what |
 |---|---|
 | [**mere**](https://github.com/merelang/mere) | reference compiler / runtime / examples / docs (OCaml) |
+| [**mere-vscode**](https://github.com/merelang/mere-vscode) | VS Code extension — a thin client over `mere lsp` |
 
-More repos may be split out as the language stabilises (a tree-sitter
-grammar and a dedicated DOM bindings library are the obvious next
-candidates), but the policy is **dogfood-first**: nothing graduates
-out of `mere/contrib/` until there is an external consumer asking for
-independent versioning.
+The policy is **dogfood-first**: nothing graduates out of `mere/contrib/`
+until there is an external consumer asking for independent versioning.
+`mere-vscode` is separate because the coupling is a protocol rather than a
+filesystem — the extension does not read a line of the compiler's source,
+it starts `mere lsp` and speaks LSP.
 
 ## Status
 
-- **1580 tests** across interp + C + LLVM + Wasm. 16 realistic
-  examples (~2500 LoC; toy_sql.mere alone is 1165 LoC) match
-  `diff = 0 PERFECT` across all four backends.
-- **Phase 48 (frontend FFI MVP)** shipped 2026-06-25 — Mere code now
-  runs interactively in the browser via DOM bindings + an exported
-  Wasm function table that lets JavaScript dispatch back into Mere
-  closures. See [counter demo](https://github.com/merelang/mere/blob/main/contrib/site/playground/counter.mere).
-- **`mere fmt`** is the built-in source formatter with `--check` for
-  CI / pre-commit (Phase 47).
+- **2526 tests**, cross-backend parity over 112 programs, and about thirty
+  differential gates in CI that compare Mere against external oracles
+  (protoc, grpcurl, graphql-js, python `h2` / `hpack`, html5lib, QEMU,
+  Blargg's Game Boy suite, and others).
+- **Self-hosting at a fixpoint**: the Mere-in-Mere compiler, compiled by
+  itself and run as Wasm, emits byte-identical output to the reference.
+- **A fifth backend, and an operating system on it**: `mere -rv` emits a
+  flat RV32IM binary with no external assembler or linker, and `--bare`
+  hands the program the machine instead of a host — raw memory arrives as
+  an unforgeable window capability and traps are ordinary closures. On
+  that: a preemptive scheduler, a shell, a syscall boundary, and the
+  self-hosted compiler running as a user process **on a RISC-V CPU also
+  written in Mere**, emitting WAT byte-identical to the native one.
+- **Editor support out of the compiler's own answers**: diagnostics,
+  hover, definition, completion, outline, formatting, semantic tokens,
+  references and rename, served by `mere lsp`.
 
 ## What's distinctive
 
-- **Memory model**: 5 strategies (owned / borrowed / region / view /
-  stack) chosen at the type level, not auto-inferred. Region values
-  are `Trivial[R]` by default; `with` handles `Drop` types in LIFO
-  scope order.
+- **Memory model**: strategies (owned / borrowed / region / view / stack)
+  chosen at the type level, not auto-inferred. Region values are
+  `Trivial[R]` by default; `with` handles `Drop` types in LIFO scope order.
 - **Effects as values**: capabilities are passed as ordinary function
-  arguments — no monad-of-the-month, no effect rows. The bucket-brigade
-  is intentional and shape-of-signature-aliased.
+  arguments — no monad-of-the-month, no effect rows.
 - **Borrow annotations**: four modes (`&R T` / `&mut R T` /
-  `&shared write R T` / `&exclusive R T`) cover the full 10-pair
+  `&shared write R T` / `&exclusive R T`) covering the full 10-pair
   conflict matrix, checked statically.
-- **4-backend feature parity**: anything in interp also runs as C
-  native binary, LLVM IR, and Wasm — verified by `diff = 0` on the
-  same example set.
+- **Backends that are held to each other**: anything the interpreter runs
+  also runs as a native binary, LLVM IR, Wasm, and RV32IM machine code —
+  and disagreements are gated, not assumed away.
 
 ## Getting started
 
 ```sh
-git clone git@github.com:merelang/mere
-cd mere
-dune build
-dune exec mere -- examples/factorial.mere   # interpreter
-dune exec mere -- -c examples/factorial.mere | clang -x c - -o fact && ./fact  # C
-dune exec mere -- -w examples/factorial.mere > fact.wat && wat2wasm fact.wat   # Wasm
+curl -fsSL https://raw.githubusercontent.com/merelang/mere/main/scripts/install.sh | sh
+mere examples/factorial.mere
 ```
 
-Full tutorial: [docs/tutorial.md](https://github.com/merelang/mere/blob/main/docs/tutorial.md).
+Docs, tutorial and a Wasm playground: **[merelang.org](https://merelang.org/)**.
 
 ## License
 
