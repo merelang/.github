@@ -1,8 +1,10 @@
 # merelang
 
 A small ML-family programming language with region-based memory (no GC),
-effects as ordinary capability values, and **five backends kept in
-byte-level agreement**: interpreter, C, LLVM IR, Wasm, and RV32IM.
+effects as ordinary capability values, and **five backends**: interpreter,
+C, LLVM IR, Wasm, and RV32IM. The first four are held to each other by a
+parity suite that compares their output byte for byte; the fifth boots
+under QEMU — the one implementation in the stack nobody here wrote.
 
 The name **Mere** is Old English for "lake" — the region metaphor (a
 body bounded from its surroundings), the minimal ML-family ring, and a
@@ -51,8 +53,9 @@ it starts `mere lsp` and speaks LSP.
   `&shared write R T` / `&exclusive R T`) covering the full 10-pair
   conflict matrix, checked statically.
 - **Backends that are held to each other**: anything the interpreter runs
-  also runs as a native binary, LLVM IR, Wasm, and RV32IM machine code —
-  and disagreements are gated, not assumed away.
+  also runs as a native binary, as LLVM IR and as Wasm, compared byte for
+  byte — and where they legitimately differ, the difference is pinned so
+  it keeps being asked about rather than tolerated.
 
 ## Getting started
 
